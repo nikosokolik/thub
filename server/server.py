@@ -236,9 +236,9 @@ def parse_argumets():
     parser.add_argument('--port', '-p', help=f"The port the server will listen on",
         type=int, required=True)
     parser.add_argument('--cert', '-c', help=f"The path to the certificate file. Defaults to {DEFAULT_SERVER_CERT}",
-        type=str, required=True, default=DEFAULT_SERVER_KEY)
+        type=str, required=False, default=DEFAULT_SERVER_KEY)
     parser.add_argument('--key', '-k', help=f"The path to the keyfile. Defaults to {DEFAULT_SERVER_KEY}",
-        type=str, required=True, default=DEFAULT_SERVER_KEY)
+        type=str, required=False, default=DEFAULT_SERVER_KEY)
     return parser.parse_args()
 
 
@@ -249,7 +249,7 @@ def main():
         with THUBServer((args.bind, args.port), THUBHandler, args.cert, args.key) as server:
             server.serve_forever()
     else:
-        print(f"Could not find the key file {args.key} or the certificate {args.crt}")
+        print(f"Could not find the key file '{args.key}' or the certificate '{args.cert}'")
 
 
 if __name__ == '__main__':
