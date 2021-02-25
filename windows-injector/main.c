@@ -6,10 +6,10 @@
 #define HAVE_REMOTE
 #include <pcap.h> //Winpcap
 
-#pragma comment(lib , "ws2_32.lib") //For winsock
 #pragma comment(lib , "wpcap.lib") //For winpcap
-#pragma comment(lib, "libcrypto.lib") //For libssl
+#pragma comment(lib , "ws2_32.lib") //For winsock
 #pragma comment(lib, "libssl.lib") //For libssl
+#pragma comment(lib, "libcrypto.lib") //For libssl
 
 #include "network.h"
 #include "utils.h"
@@ -35,15 +35,16 @@ const int MAX_PACKET_SIZE = 65536;
 const int CAPTURE_TIMEOUT_MS = 1000; // One second
 const DWORD SOCKET_READ_TIMEOUT_MS = 1000; // One second
 const LPCWSTR SHOULD_QUIT_MUTEX_NAME = L"SHOULD_QUIT_MUTEX";
-const char BPF_FILTER[] = "not ip host ";
+const char BPF_FILTER_START[] = "not (ip host ";
+const char BPF_FILTER_PART_2[] = " and port ";
 // USAGE
 const char* USAGE_FORMAT = "%s\n%s %s\n\t%s\n\t%s\n\t%s\n\t%s\n";
-const char* USAGE_TITLE = "VPH - USAGE:";
+const char* USAGE_TITLE = "THUB - USAGE:";
 const char* USAGE_LINE_1 = "[-d | -i <TARGET_INTERFACE> -s <SERVER_IP> -p <SERVER_PORT>]";
 const char* USAGE_LINE_2 = "-d Enumerate capturable devices";
-const char* USAGE_LINE_3 = "-i Interface number as can be derieved from '-d'";
-const char* USAGE_LINE_4 = "-s VPH-Host IP";
-const char* USAGE_LINE_5 = "-p VPH-Host port";
+const char* USAGE_LINE_3 = "-i Interface number to capture on. Can be derieved from '-d'";
+const char* USAGE_LINE_4 = "-s THUB-Server IP";
+const char* USAGE_LINE_5 = "-p THUB-Server port";
 
 // The varraible is global so it would be accessible by the KeyboardInterruptHandler
 BOOLEAN shouldQuit;
@@ -56,8 +57,10 @@ BOOLEAN WINAPI KeyboardInterruptHandler(_In_ DWORD dwCtrlType) {
     case CTRL_C_EVENT:
         threadSafeFprintf(stderr, "Keyboard Interrup caught! Exiting.\n");
         shouldQuitFlagMutex = CreateMutex(NULL, FALSE, SHOULD_QUIT_MUTEX_NAME);
-        syncSetShouldQuitValue(&shouldQuit, shouldQuitFlagMutex, TRUE);
-        CloseHandle(shouldQuitFlagMutex);
+        if (shouldQuitFlagMutex != NULL) {
+            syncSetShouldQuitValue(&shouldQuit, shouldQuitFlagMutex, TRUE);
+            CloseHandle(shouldQuitFlagMutex);
+        }
         return TRUE;
     default:
         // Pass signal on to the next handler
@@ -171,24 +174,36 @@ BOOLEAN jumpToDevice(pcap_if_t* device, int index) {
     return TRUE;
 }
 
-char* generateBPFFilter(char* serverIP)
+char* generateBPFFilter(char* serverIP, int serverPort)
 /*
     Allocates a new string that contains the BFP_FILTER with the given IP.
     The filter is used then to filter out the program's communication with the control server.
     *** The user must free the returned value!
 */
 {
+    char strPort[6];
+    memset(strPort, 0, sizeof strPort);
+    int strPortLen = 0;
     int IPLen = strlen(serverIP);
-    int bpfLen = strlen(BPF_FILTER);
-    int filterLen = bpfLen + IPLen + 1;
-    int i = 0;
+    int bpf1Len = strlen(BPF_FILTER_START);
+    int bpf2Len = strlen(BPF_FILTER_PART_2);
+    sprintf_s(strPort, 6, "%d", serverPort);
+    strPortLen = strlen(strPort);
+    int filterLen = bpf1Len + IPLen + bpf2Len + strPortLen + 1 + 1;
     char* filter = malloc(sizeof(char) * filterLen);
-    // Copy the BPF filter without the tailing \x00
-    memcpy((void*)filter, (void*)BPF_FILTER, bpfLen);
-    // Copy the IP address
-    memcpy((void*)(filter + bpfLen), (void*)serverIP, IPLen);
-    // Make sure the string has an ending \x00
-    filter[bpfLen + IPLen] = 0;
+    if (filter != NULL) {
+        // Copy the begining of the BPF filter without the tailing \x00
+        memcpy((void*)filter, (void*)BPF_FILTER_START, bpf1Len);
+        // Copy the IP address
+        memcpy((void*)(filter + bpf1Len), (void*)serverIP, IPLen);
+        // Copy the second part of the BPF filter without the tailing \x00
+        memcpy((void*)(filter + bpf1Len + IPLen), (void*)BPF_FILTER_PART_2, bpf2Len);
+        // Copy the port and close with ')'
+        memcpy((void*)(filter + bpf1Len + IPLen + bpf2Len), (void*)strPort, strPortLen);
+        filter[bpf1Len + IPLen + bpf2Len + strPortLen] = ')';
+        // Make sure the string has an ending \x00
+        filter[bpf1Len + IPLen + bpf2Len + strPortLen + 1] = 0;
+    }
     return filter;
 }
 
@@ -334,7 +349,8 @@ int captureMain(pcap_if_t* device, int targetDevice, char* serverIP, int serverP
                     if (device->addresses != NULL) {
                         netmask = ((struct sockaddr_in*)(device->addresses->netmask))->sin_addr.S_un.S_addr;
                     }
-                    capture_filter = generateBPFFilter(serverIP);
+                    capture_filter = generateBPFFilter(serverIP, serverPort);
+                    threadSafeFprintf(stdout, "The BPF Filter is %s\n", capture_filter);
                     if (pcap_compile(fp, &bpfBinary, capture_filter, TRUE, netmask) >= 0) {
                         if (pcap_setfilter(fp, &bpfBinary) != -1) {
 
@@ -453,9 +469,10 @@ int main(int argc, char* argv[])
                         injectionThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)injectionMain, &threadArgs, 0, &injectionThreadID);
 
                         retval = captureMain(device, targetDevice, argv[serverIpIndex], serverPort);
-
-                        WaitForSingleObject(injectionThread, INFINITE);
-                        CloseHandle(injectionThread);
+                        if (injectionThread != NULL) {
+                            WaitForSingleObject(injectionThread, INFINITE);
+                            CloseHandle(injectionThread);
+                        }
                         DestroySSL();
                         /* If the inectionThread failed and the capture succeded,
                         set the return value to be the injectionThread return value. */

@@ -5,7 +5,7 @@ from tap_utils import iff_up as _iff_up, iff_down as _iff_down
 class Bridge(object):
     def __init__(self, name=None):
         if name == None:
-            name = b'vph_br'
+            name = b'thub_br'
         elif type(name) is str:
             name = name.encode()
         self._name = name

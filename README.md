@@ -1,5 +1,5 @@
-# Thub - Tunneled Hub
-**A tool for pivoting in a target's network with multiple attackers.**
+# THUB - Tunneled Hub `(Or The Hacker's Ultimate Buddy)`
+**A tool for pivoting inside a target's network with multiple attackers.**
 
 ##### Motivaion
 Thub is a tool that is designed to allow multiple attackers to inspect, research, and execute attacks on a compromised network, without interfering in each other's attacks. Using a single access point to a network, the attackers can execute _windows_injector_ or _linux_injector_ on a compromised machine, and the _client_ on their attack Linux.
@@ -11,5 +11,6 @@ Using the same server additional attackers can also connect and execute addition
 2. The attackers execute _windows_injector_ or _linux_injector_ on a compromised machine. The program connects to the server and begins to forward traffic from the machine to the server and vice versa.
 3. The attackers execute the _client_ on their Linux devices, and begin exploring the compromised network.
 
-## Disclaimer
-* This code is only for educational purposes. I am not responsible in any way for any malicious or illegal use of this code. Please make use of this code only with the permission of the target.
+## Disclaimers
+* The code in this project and all it's subfolders is only for educational purposes. I am not responsible in any way for any malicious or illegal use of this code. Please make use of this code only with the permission of the target.
+* This tool is designed for advanced pivoting and not for security, thereofre, I did not implement certificate validation in any of the client sides. The SSL Layer is there only to assure that the information is not sent unencrypted over the Internet.

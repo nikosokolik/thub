@@ -38,14 +38,14 @@ def add_tap(device_name):
     """
         Adds a tap device
         returns the human-readable name of the generated device and a handle to the device that must be kept for the
-        garbage cleaner to not close the device
+        garbage cleaner to not close the device.
     """
     tap = open('/dev/net/tun', 'r+b', buffering=0)
     ifr = struct.pack('16sH', device_name, IFF_TAP | IFF_NO_PI)
     created_device = fcntl.ioctl(tap, TUNSETIFF, ifr)
     fcntl.ioctl(tap, TUNSETOWNER, 1000)
     generated_device_name = created_device.split(b'\x00')[0]
-    # The host program must keep a handle to tap at all times. losing the handle causes the device to disconnect
+    # The host program must keep a handle to tap at all times. Losing the handle closes the device.
     if not check_if_device_exists(generated_device_name):
         raise Exception('Could not add device!')
     return generated_device_name, tap

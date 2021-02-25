@@ -140,7 +140,7 @@ def main_loop(server_ip, server_port, bridge_name, physical_interface_name,
 
 
 def parse_argumets():
-    parser = argparse.ArgumentParser(description='VPH client')
+    parser = argparse.ArgumentParser(description='THUB Injector')
     parser.add_argument('--config', '-c', help="Path to the config file", type=str, required=True)
     parser.add_argument('--debug', '-d', help="Display debug messges", action='store_true', required=False, default=False)
     return parser.parse_args()

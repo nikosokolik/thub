@@ -134,7 +134,7 @@ def main_loop(server_ip, server_port, tap_name, mac_address, ip_address, netmask
 
 
 def parse_argumets():
-    parser = argparse.ArgumentParser(description='VPH client')
+    parser = argparse.ArgumentParser(description='THUB client')
     parser.add_argument('--config', '-c', help="Path to the config file", type=str, required=True)
     parser.add_argument('--debug', '-d', help="Display debug messges", action='store_true', required=False, default=False)
     return parser.parse_args()

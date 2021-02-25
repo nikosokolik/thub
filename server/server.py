@@ -6,6 +6,7 @@ import select
 import random
 import argparse
 import socketserver
+from os import path
 from time import sleep
 from string import digits
 from threading import Lock
@@ -13,6 +14,8 @@ from threading import Lock
 
 SLEEP_TIME_SEC = 0.005
 MAC_ADDRESS_LENGTH = 6
+DEFAULT_SERVER_KEY = "server.key"
+DEFAULT_SERVER_CERT = "server.crt"
 DEFAULT_LISTEN_ADDRESS = "0.0.0.0"
 
 
@@ -30,7 +33,7 @@ class SyncronizedDict(dict):
             super(SyncronizedDict, self).__setitem__(key, value)
 
 
-class VPHHandler(socketserver.BaseRequestHandler):
+class THUBHandler(socketserver.BaseRequestHandler):
     # Control messages
     HUB_OUTPUT_SOCKET_TYPE_CAPTURER = b"HOSTC"
     HUB_OUTPUT_SOCKET_TYPE_INJECTOR = b"HOSTI"
@@ -173,7 +176,7 @@ class VPHHandler(socketserver.BaseRequestHandler):
             self.request.close()
 
 
-class VPHServer(socketserver.ThreadingTCPServer):
+class THUBServer(socketserver.ThreadingTCPServer):
     def __init__(self, listen_address, listen_handler, certfile, keyfile):
         super(socketserver.ThreadingTCPServer, self).__init__(listen_address, listen_handler)
         self.certfile = certfile
@@ -216,9 +219,9 @@ class VPHServer(socketserver.ThreadingTCPServer):
                 self.hub_output_listeners[client_mac].put(packet)
 
     def get_random_mac_address(self):
-        address = VPHServer._random_mac()
+        address = THUBServer._random_mac()
         while address in self.hub_output_listeners.keys():
-            address = VPHServer._random_mac()
+            address = THUBServer._random_mac()
         return address
 
     @staticmethod
@@ -227,23 +230,26 @@ class VPHServer(socketserver.ThreadingTCPServer):
 
 
 def parse_argumets():
-    parser = argparse.ArgumentParser(description='VPH server')
+    parser = argparse.ArgumentParser(description='THUB server')
     parser.add_argument('--bind', '-b', help=f"The IP address the server will listen on. Defaults to {DEFAULT_LISTEN_ADDRESS}",
         type=str, required=False, default=DEFAULT_LISTEN_ADDRESS)
     parser.add_argument('--port', '-p', help=f"The port the server will listen on",
         type=int, required=True)
-    parser.add_argument('--cert', '-c', help=f"The path to the certificate file",
-        type=str, required=True)
-    parser.add_argument('--key', '-k', help=f"The path to the keyfile",
-        type=str, required=True)
+    parser.add_argument('--cert', '-c', help=f"The path to the certificate file. Defaults to {DEFAULT_SERVER_CERT}",
+        type=str, required=True, default=DEFAULT_SERVER_KEY)
+    parser.add_argument('--key', '-k', help=f"The path to the keyfile. Defaults to {DEFAULT_SERVER_KEY}",
+        type=str, required=True, default=DEFAULT_SERVER_KEY)
     return parser.parse_args()
 
 
 def main():
     args = parse_argumets()
     socketserver.ThreadingTCPServer.allow_reuse_address = True
-    with VPHServer((args.bind, args.port), VPHHandler, args.cert, args.key) as server:
-        server.serve_forever()
+    if path.isfile(args.cert) and path.isfile(args.key):
+        with THUBServer((args.bind, args.port), THUBHandler, args.cert, args.key) as server:
+            server.serve_forever()
+    else:
+        print(f"Could not find the key file {args.key} or the certificate {args.crt}")
 
 
 if __name__ == '__main__':

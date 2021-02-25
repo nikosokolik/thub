@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "thub_windows_injector", "thub_windows_injector.vcxproj", "{712F0132-94AC-40D3-B8CE-194944A6DC23}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "thub-windows-injector", "thub-windows-injector.vcxproj", "{712F0132-94AC-40D3-B8CE-194944A6DC23}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
