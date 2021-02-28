@@ -1,5 +1,5 @@
 import bridge_utils as _bridge_utils
-from tap_utils import iff_up as _iff_up, iff_down as _iff_down
+from tap_utils import activate_interface as _activate_interface, disable_interface as _disable_interface
 
 
 class Bridge(object):
@@ -23,12 +23,12 @@ class Bridge(object):
 
     def create_bridge(self):
         _bridge_utils.add_bridge(self._name)
-        _iff_up(self._name)
+        _activate_interface(self._name)
 
     def destroy_bridge(self):
         for connected_interface in self._connected_interfaces:
             self.delete_interface(connected_interface)
-        _iff_down(self._name)
+        _disable_interface(self._name)
         _bridge_utils.delete_bridge(self._name)
 
     def __enter__(self):

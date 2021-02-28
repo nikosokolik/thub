@@ -77,7 +77,7 @@ def set_netmask(device_name, netmask):
         s.close()
 
 
-def iff_up(device_name):
+def activate_interface(device_name):
     s = socket.socket()
     try:
         original_flags_ifreq = struct.pack("18s", device_name)
@@ -91,7 +91,7 @@ def iff_up(device_name):
         s.close()
 
 
-def iff_down(device_name):
+def disable_interface(device_name):
     s = socket.socket()
     try:
         original_flags_ifreq = struct.pack("18s", device_name)

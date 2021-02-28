@@ -5,7 +5,7 @@ import struct
 
 
 AF_UNIX         = 0x1
-activate_interface          = 0x1
+IFF_UP          = 0x1
 IFF_TAP         = 0x0002
 IFF_NO_PI       = 0x1000
 TUNSETIFF       = 0x400454ca
@@ -84,23 +84,23 @@ def activate_interface(device_name):
         original_flags_ifreq = struct.pack("18s", device_name)
         request_result = fcntl.ioctl(s.fileno(), SIOCGIFFLAGS, original_flags_ifreq)
         flags = struct.unpack("16sh",request_result)[1]
-        # Set the activate_interface bit to be true
-        if (flags & activate_interface == 0x0):
-            ifreq = struct.pack("16sh", device_name, flags + activate_interface)
+        # Set the IFF_UP bit to be true
+        if (flags & IFF_UP == 0x0):
+            ifreq = struct.pack("16sh", device_name, flags + IFF_UP)
             fcntl.ioctl(s.fileno(), SIOCSIFFLAGS, ifreq)
     finally:
         s.close()
 
 
-def iff_down(device_name):
+def disable_interface(device_name):
     s = socket.socket()
     try:
         original_flags_ifreq = struct.pack("18s", device_name)
         request_result = fcntl.ioctl(s.fileno(), SIOCGIFFLAGS, original_flags_ifreq)
         flags = struct.unpack("16sh",request_result)[1]
-        # Set the activate_interface bit to be false
-        if (flags & activate_interface == 0x1):
-            ifreq = struct.pack("16sh", device_name, flags - activate_interface)
+        # Set the IFF_UP bit to be false
+        if (flags & IFF_UP == 0x1):
+            ifreq = struct.pack("16sh", device_name, flags - IFF_UP)
             fcntl.ioctl(s.fileno(), SIOCSIFFLAGS, ifreq)
     finally:
         s.close()

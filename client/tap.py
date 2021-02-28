@@ -78,7 +78,7 @@ class Tap(object):
         _tap_utils.iff_up(self.tap_name)
 
     def shutdown_interface(self):
-        _tap_utils.iff_down(self.tap_name)
+        _tap_utils.disable_interface(self.tap_name)
 
     def _check_if_mac_has_changed(self):
         """
