@@ -9,7 +9,7 @@ In order to execute thub_windows_injector, The user must determine what interfac
 thub_windows_injector.exe -d
 ```
 and see a list of the interfaces that capturing can be done on.
-Once the interface is determined, and there is a server executing the server, the user can simply run:
+Once the interface is determined, and there is a server executing the [server](../server), the user can simply run:
 ```bash
 thub_windows_injector.exe -i INTERFACE_ID -s SERVER_IP -p SERVER_PORT
 ```

@@ -4,7 +4,7 @@
 
 ## Thub Linux Injector - Details
 ## Overview
-In general, the Linux injector, unlike the windows one, is written in python and simply reuses the _client_'s code. The differences are in the introduction to the server (i.e. the server knows this is the injection point and not another client), and that in addition to creating a tap device the injector creates a "bridge" between the tap and the interface. This way by reading and writing to the tap, the OS is actually writing to the physical device.
+In general, the Linux injector, unlike the windows one, is written in python and simply reuses the [client](../client)'s code. The differences are in the introduction to the server (i.e. the server knows this is the injection point and not another client), and that in addition to creating a tap device the injector creates a "bridge" between the tap and the interface. This way by reading and writing to the tap, the OS is actually writing to the physical device.
 
 ### Usage
 In order to execute the Linux injector, first, create a configuration file. You may copy `default_config.json`, or copy it from here:
@@ -48,7 +48,7 @@ Here is an example:
 }
 ```
 * Note that some MAC addresses are illegal, and the OS will not allow their use.
-* Also, since the tap is only used to allow the device to capture and inject to another interface, the IP address has no real meaning, and therefore adding this information is redundant.
+* Also, since the tap is only used to allow the device to capture and inject to another interface, the IP address and the MAC address have no real meaning, and therefore adding this information is redundant.
 
 Once you have your configuration file ready, just execute:
 ```bash
