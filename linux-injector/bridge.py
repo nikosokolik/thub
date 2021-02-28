@@ -37,3 +37,6 @@ class Bridge(object):
 
     def __exit__(self, type=None, value=None, tb=None):
         self.destroy_bridge()
+
+    def __repr__(self):
+        return f"Bridge device {self._name}"

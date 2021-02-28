@@ -6,8 +6,8 @@
 #define HAVE_REMOTE
 #include <pcap.h> //Winpcap
 
-#pragma comment(lib , "wpcap.lib") //For winpcap
-#pragma comment(lib , "ws2_32.lib") //For winsock
+#pragma comment(lib, "wpcap.lib") //For winpcap
+#pragma comment(lib, "ws2_32.lib") //For winsock
 #pragma comment(lib, "libssl.lib") //For libssl
 #pragma comment(lib, "libcrypto.lib") //For libssl
 

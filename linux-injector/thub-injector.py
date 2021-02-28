@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import ssl
 import json
 import socket
@@ -12,11 +13,8 @@ from bridge import Bridge
 
 
 SLEEP_TIME_SEC = 0.005
-CAPTURER_INFORM_MESSAGE = b'HOSTC'   # Hub Output - Socket Type Capturer
-INJECTOR_INFORM_MESSAGE = b'HOSTI'   # Hub Output - Socket Type Injector
-
-
-debug = False
+CAPTURER_INFORM_MESSAGE = b'TISTW' # THUB Injector - Socket Type Writer
+INJECTOR_INFORM_MESSAGE = b'TISTR' # THUB Injector - Socket Type Reader
 
 
 def read_packet(client_socket):
@@ -55,41 +53,31 @@ def send_packet(client_socket, packet):
     client_socket.sendall(prepare_packet(packet))
 
 
-def display_packet_info(packet, direction):
-    src_mac_address = packet[6:12]
-    dst_mac_address = packet[0:6]
-    parsed_src_address = ":".join([hex(i)[2:] if len(hex(i)) == 4 else '0'+hex(i)[2:] for i in src_mac_address])
-    parsed_dst_address = ":".join([hex(i)[2:] if len(hex(i)) == 4 else '0'+hex(i)[2:] for i in dst_mac_address])
-    print(f"[*] {direction} Packet from {parsed_src_address} to {parsed_dst_address}, packet length: {len(packet)}")
-
-
-def communicate_loop(device, injector_client_socket, capturer_client_socket):
-    global debug
+def communication_loop(device, injector_client_socket, capturer_client_socket):
     while True:
         should_sleep = True
         # Read from tap and write to server socket
         if device.is_ready_to_read():
             packet, sender = device.read_packet()
-            if debug:
-                display_packet_info(packet, "Recieveing")
             send_packet(capturer_client_socket, packet)
             should_sleep = False
         # Read from server socket and write to tap
         ready_socket, _, _ = select.select([injector_client_socket], [], [], 0)
         if ready_socket:
             packet = read_packet(injector_client_socket)
-            if debug:
-                display_packet_info(packet, "Sending")
             device.send_packet(packet)
             should_sleep = False
-        # Sleep to avoid busy loops
+        # Sleep to avoid busy loops if no packets were sent
         if should_sleep:
             sleep(SLEEP_TIME_SEC)
 
 
-def get_device_info(device):
+def print_device_info(device):
+    print(f"[*] Created device: {device}", end='\n\t')
     parsed_mac_address = ":".join([hex(i)[2:] if len(hex(i)) == 4 else '0'+hex(i)[2:] for i in device.mac_address])
-    return f"\tMAC Address:\t{parsed_mac_address}\n\tIP Address:\t{device.ip}\n\tNetmask:\t{device.netmask}"
+    print("\n\t".join([f"MAC Address:\t{parsed_mac_address}",
+                       f"IP Address:\t{device.ip}",
+                       f"Netmask:\t{device.netmask}"]))
 
 
 def create_ssl_socket(server_ip, server_port):
@@ -118,16 +106,15 @@ def main_loop(server_ip, server_port, bridge_name, physical_interface_name,
     injector_client_ssl, injector_client = create_ssl_socket(server_ip, server_port)
     try:
         with Tap(tap_name, ip_address, netmask, mac_address) as device:
-            print(f"[*] Created device: {device}")
-            print(get_device_info(device))
+            print_device_info(device)
             with Bridge(bridge_name) as bridge:
+                print(f"[*] Created device: {bridge}")
                 bridge.add_interface(physical_interface_name)
                 bridge.add_interface(device.tap_name)
-                print(f"[*] You can start using {device.tap_name.decode()} now")
                 init_client_injector_socket(injector_client_ssl)
                 init_client_capturer_socket(capturer_client_ssl)
                 try:
-                    communicate_loop(device, injector_client_ssl, capturer_client_ssl)
+                    communication_loop(device, injector_client_ssl, capturer_client_ssl)
                 finally:
                     print(f"\n[*] Closing tap device: {device}")
     finally:
@@ -142,14 +129,14 @@ def main_loop(server_ip, server_port, bridge_name, physical_interface_name,
 def parse_argumets():
     parser = argparse.ArgumentParser(description='THUB Injector')
     parser.add_argument('--config', '-c', help="Path to the config file", type=str, required=True)
-    parser.add_argument('--debug', '-d', help="Display debug messges", action='store_true', required=False, default=False)
     return parser.parse_args()
 
 
 def main():
-    global debug
     args = parse_argumets()
-    debug = args.debug
+    if not os.path.isfile(args.config):
+        print(f"Could not open the configuration file {args.config}")
+        return
     with open(args.config) as conf_file:
         config = json.load(conf_file)
     main_loop(

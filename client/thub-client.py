@@ -1,21 +1,19 @@
 #!/usr/bin/python3
 
+import os
 import ssl
 import json
 import socket
 import select
 import argparse
-from tap import Tap
 from time import sleep
 from string import digits
+from tap import Tap
 
 
 SLEEP_TIME_SEC = 0.005
-HUB_INPUT_SOCKET_TYPE_CLIENT = b'HISTC'
-CLIENT_CONTROLL_SET_SOCKET_MAC_ADDRESS = b'CCSSM'
-
-
-debug = False
+THUB_CLIENT_SOCKET_READ_WRITE = b'TCSRW'
+CONTROL_SOCKET_UPDATE_MAC_ADDRESS = b'CSUMA'
 
 
 def read_packet(client_socket):
@@ -55,7 +53,7 @@ def send_packet(client_socket, packet):
 
 
 def inform_server_about_new_mac_address(client, new_mac):
-    client.send(CLIENT_CONTROLL_SET_SOCKET_MAC_ADDRESS + new_mac)
+    client.send(CONTROL_SOCKET_UPDATE_MAC_ADDRESS + new_mac)
 
 
 def validate_send_mac_address(sender_address, device, client):
@@ -66,47 +64,37 @@ def validate_send_mac_address(sender_address, device, client):
             print("\n".join(["[!] Warning! Sending a packet with a mac address that differs from the device's address.",
                              "This can cause unexpected behaviour!"]))
 
-
-def display_packet_info(packet, direction):
-    src_mac_address = packet[6:12]
-    dst_mac_address = packet[0:6]
-    parsed_src_address = ":".join([hex(i)[2:] if len(hex(i)) == 4 else '0'+hex(i)[2:] for i in src_mac_address])
-    parsed_dst_address = ":".join([hex(i)[2:] if len(hex(i)) == 4 else '0'+hex(i)[2:] for i in dst_mac_address])
-    print(f"[*] {direction} Packet from {parsed_src_address} to {parsed_dst_address}, packet length: {len(packet)}")
-
-
-def communicate_loop(device, client_socket):
-    global debug
+def communication_loop(device, client_socket):
     while True:
         should_sleep = True
         ready_socket, _, _ = select.select([client_socket], [], [], 0)
         # Read from server socket and write to tap
         if ready_socket:
             packet = read_packet(client_socket)
-            if debug:
-                display_packet_info(packet, "Sending")
             device.send_packet(packet)
             should_sleep = False
         # Read from tap and write to server socket
         if device.is_ready_to_read():
             packet, sender = device.read_packet()
             validate_send_mac_address(sender, device, client_socket)
-            if debug:
-                display_packet_info(packet, "Recieveing")
             send_packet(client_socket, packet)
             should_sleep = False
-        # Sleep to avoid busy loops
+        # Sleep to avoid busy loops if no packets were sent
         if should_sleep:
             sleep(SLEEP_TIME_SEC)
 
 
-def get_device_info(device):
+def print_new_device_info(device):
+    print(f"[*] Created device: {device}", end='\n\t')
     parsed_mac_address = ":".join([hex(i)[2:] if len(hex(i)) == 4 else '0'+hex(i)[2:] for i in device.mac_address])
-    return f"\tMAC Address:\t{parsed_mac_address}\n\tIP Address:\t{device.ip}\n\tNetmask:\t{device.netmask}"
+    print('\n\t'.join([f"MAC Address:\t{parsed_mac_address}",
+                       f"IP Address:\t{device.ip}",
+                       f"Netmask:\t{device.netmask}"]))
+    print(f"[*] You can start using {device.tap_name.decode()} now")
 
 
 def init_client_socket(client, mac_address):
-    client.send(HUB_INPUT_SOCKET_TYPE_CLIENT)
+    client.send(THUB_CLIENT_SOCKET_READ_WRITE)
     inform_server_about_new_mac_address(client, mac_address)
 
 
@@ -119,12 +107,10 @@ def main_loop(server_ip, server_port, tap_name, mac_address, ip_address, netmask
     ssl_socket = ssl.wrap_socket(client)
     try:
         with Tap(tap_name, ip_address, netmask, mac_address) as device:
-            print(f"[*] Created device: {device}")
-            print(get_device_info(device))
-            print(f"[*] You can start using {device.tap_name.decode()} now")
+            print_new_device_info(device)
             init_client_socket(ssl_socket, device.mac_address)
             try:
-                communicate_loop(device, ssl_socket)
+                communication_loop(device, ssl_socket)
             finally:
                 print(f"\n[*] Closing tap device: {device}")
     finally:
@@ -136,21 +122,20 @@ def main_loop(server_ip, server_port, tap_name, mac_address, ip_address, netmask
 def parse_argumets():
     parser = argparse.ArgumentParser(description='THUB client')
     parser.add_argument('--config', '-c', help="Path to the config file", type=str, required=True)
-    parser.add_argument('--debug', '-d', help="Display debug messges", action='store_true', required=False, default=False)
     return parser.parse_args()
 
 
 def main():
-    global debug
     args = parse_argumets()
-    debug = args.debug
-    with open(args.config) as conf_file:
-        config = json.load(conf_file)
+    if not os.path.isfile(args.config):
+        print(f"Could not open the configuration file {args.config}")
+        return
+    with open(args.config) as args.config:
+        config = json.load(args.config)
     main_loop(
         server_ip=config['server']['host'], server_port=config['server']['port'],
         tap_name=config['client']['tap_name'], mac_address=config['client']['mac_address'],
-        ip_address=config['client']['ip_address'], netmask=config['client']['ip_netmask']
-        )
+        ip_address=config['client']['ip_address'], netmask=config['client']['ip_netmask'])
 
 
 if __name__ == '__main__':

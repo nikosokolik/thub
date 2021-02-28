@@ -9,8 +9,8 @@
 #include "utils.h"
 
 // Note that the messages must be of size 5 bytes
-const char* CAPTURER_INFORM_MESSAGE = "HOSTC"; // Hub Output - Socket Type Capturer
-const char* INJECTOR_INFORM_MESSAGE = "HOSTI"; // Hub Output - Socket Type Injector
+const char* THUB_INECTOR_SOCKET_TYPE_READER = "TISTR";
+const char* THUB_OUTPUT_SOCKET_TYPE_CAPTURER = "TISTW";
 
 void InitializeSSL()
 {
@@ -222,9 +222,9 @@ BOOLEAN sendMessage(SSL* ssl, char* informMessage) {
 }
 
 BOOLEAN informCapturer(SSL* ssl) {
-	return sendMessage(ssl, CAPTURER_INFORM_MESSAGE);
+	return sendMessage(ssl, THUB_OUTPUT_SOCKET_TYPE_CAPTURER);
 }
 
 BOOLEAN informInjector(SSL* ssl) {
-	return sendMessage(ssl, INJECTOR_INFORM_MESSAGE);
+	return sendMessage(ssl, THUB_INECTOR_SOCKET_TYPE_READER);
 }

@@ -19,26 +19,30 @@ DEFAULT_SERVER_CERT = "server.crt"
 DEFAULT_LISTEN_ADDRESS = "0.0.0.0"
 
 
-class SyncronizedDict(dict):
+class ThreadSafeDict(dict):
     def __init__(self, *args):
-        super(SyncronizedDict, self).__init__(args)
+        super(ThreadSafeDict, self).__init__(args)
         self.mutex = Lock()
 
     def __delitem__(self, key):
         with self.mutex:
-            super(SyncronizedDict, self).__delitem__(key)
+            super(ThreadSafeDict, self).__delitem__(key)
 
     def __setitem__(self, key, value):
         with self.mutex:
-            super(SyncronizedDict, self).__setitem__(key, value)
+            super(ThreadSafeDict, self).__setitem__(key, value)
+
+    def keys(self):
+        with self.mutex:
+            return super(ThreadSafeDict, self).keys()
 
 
 class THUBHandler(socketserver.BaseRequestHandler):
     # Control messages
-    HUB_OUTPUT_SOCKET_TYPE_CAPTURER = b"HOSTC"
-    HUB_OUTPUT_SOCKET_TYPE_INJECTOR = b"HOSTI"
-    HUB_INPUT_SOCKET_TYPE_CLIENT = b'HISTC'
-    CLIENT_CONTROLL_SET_SOCKET_MAC_ADDRESS = b'CCSSM'
+    THUB_CLIENT_SOCKET_READ_WRITE = b'TCSRW'
+    THUB_INECTOR_SOCKET_TYPE_READER = b'TISTR'
+    THUB_OUTPUT_SOCKET_TYPE_CAPTURER = b'TISTW'
+    CONTROL_SOCKET_UPDATE_MAC_ADDRESS = b'CSUMA'
 
     def _read_full_packet_by_size(self, expected_packet_size):
         full_packet = b""
@@ -69,7 +73,7 @@ class THUBHandler(socketserver.BaseRequestHandler):
     def _read_client_packet(self):
         pack_size = self.request.recv(5)
         expected_packet_size = pack_size.split(b'\x00')[0]
-        if expected_packet_size == self.CLIENT_CONTROLL_SET_SOCKET_MAC_ADDRESS:
+        if expected_packet_size == self.CONTROL_SOCKET_UPDATE_MAC_ADDRESS:
             mac_address = self._read_full_packet_by_size(6)
             self.server.update_mac_address(self.client_mac, mac_address)
             self.client_mac = mac_address
@@ -97,7 +101,7 @@ class THUBHandler(socketserver.BaseRequestHandler):
 
     def _handle_client(self):
         print(f"New client connection from {self.client}!")
-        self.client_mac = self.server.get_random_mac_address()
+        self.client_mac = self.server.get_generate_temporary_mac_address_address()
         self.server.register_new_client(self.client_mac)
         while True:
             should_sleep = True
@@ -166,11 +170,11 @@ class THUBHandler(socketserver.BaseRequestHandler):
         self.header = self.request.recv(5)
         self.client = self.request.getpeername()
 
-        if self.header == self.HUB_OUTPUT_SOCKET_TYPE_INJECTOR:
+        if self.header == self.THUB_INECTOR_SOCKET_TYPE_READER:
             self._handle_hub_injector()
-        elif self.header == self.HUB_OUTPUT_SOCKET_TYPE_CAPTURER:
+        elif self.header == self.THUB_OUTPUT_SOCKET_TYPE_CAPTURER:
             self._handle_hub_capturer()
-        elif self.header == self.HUB_INPUT_SOCKET_TYPE_CLIENT:
+        elif self.header == self.THUB_CLIENT_SOCKET_READ_WRITE:
             self._handle_client()
         else:
             self.request.close()
@@ -179,11 +183,11 @@ class THUBHandler(socketserver.BaseRequestHandler):
 class THUBServer(socketserver.ThreadingTCPServer):
     def __init__(self, listen_address, listen_handler, certfile, keyfile):
         super(socketserver.ThreadingTCPServer, self).__init__(listen_address, listen_handler)
-        self.certfile = certfile
         self.keyfile = keyfile
-        self.hub_input_queue_mutex = Lock()
+        self.certfile = certfile
         self.hub_input_queue = None
-        self.hub_output_listeners = SyncronizedDict()
+        self.hub_input_queue_mutex = Lock()
+        self.hub_output_listeners = ThreadSafeDict()
 
     def get_request(self):
         newsocket, fromaddr = self.socket.accept()
@@ -218,14 +222,14 @@ class THUBServer(socketserver.ThreadingTCPServer):
             if client_mac != packet_source_mac:
                 self.hub_output_listeners[client_mac].put(packet)
 
-    def get_random_mac_address(self):
-        address = THUBServer._random_mac()
+    def get_generate_temporary_mac_address_address(self):
+        address = THUBServer._generate_temporary_mac_address()
         while address in self.hub_output_listeners.keys():
-            address = THUBServer._random_mac()
+            address = THUBServer._generate_temporary_mac_address()
         return address
 
     @staticmethod
-    def _random_mac():
+    def _generate_temporary_mac_address():
         return bytes([random.randint(0,255) for i in range(MAC_ADDRESS_LENGTH)])
 
 
