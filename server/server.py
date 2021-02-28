@@ -191,11 +191,7 @@ class THUBServer(socketserver.ThreadingTCPServer):
 
     def get_request(self):
         newsocket, fromaddr = self.socket.accept()
-        connstream = ssl.wrap_socket(newsocket,
-                                 server_side=True,
-                                 certfile = self.certfile,
-                                 keyfile = self.keyfile,
-                                 ssl_version = ssl.PROTOCOL_SSLv23)
+        connstream = ssl.wrap_socket(newsocket, server_side=True, certfile = self.certfile, keyfile = self.keyfile, ssl_version = ssl.PROTOCOL_SSLv23)
         return connstream, fromaddr
 
     def register_hub_injector_queue(self):
@@ -240,7 +236,7 @@ def parse_argumets():
     parser.add_argument('--port', '-p', help=f"The port the server will listen on",
         type=int, required=True)
     parser.add_argument('--cert', '-c', help=f"The path to the certificate file. Defaults to {DEFAULT_SERVER_CERT}",
-        type=str, required=False, default=DEFAULT_SERVER_KEY)
+        type=str, required=False, default=DEFAULT_SERVER_CERT)
     parser.add_argument('--key', '-k', help=f"The path to the keyfile. Defaults to {DEFAULT_SERVER_KEY}",
         type=str, required=False, default=DEFAULT_SERVER_KEY)
     return parser.parse_args()
