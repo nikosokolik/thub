@@ -26,18 +26,21 @@ int threadSafeFprintf(FILE* stream, const char* format, ...) {
     va_list fprintfArgs;
     HANDLE canPrintMutex = CreateMutex(NULL, FALSE, CAN_PRINT_MUTEX_NAME);
 
-    va_start(fprintfArgs, format);
-    // Aquire mutex for safe print
-    DWORD dwWaitResult = WaitForSingleObject(canPrintMutex, INFINITE);
+    if (canPrintMutex != NULL) {
+        va_start(fprintfArgs, format);
+        // Aquire mutex for safe print
+        DWORD dwWaitResult = WaitForSingleObject(canPrintMutex, INFINITE);
 
-    ret = vfprintf(stream, format, fprintfArgs);
+        ret = vfprintf(stream, format, fprintfArgs);
 
-    // Release mutex for safe print
-    ReleaseMutex(canPrintMutex);
+        // Release mutex for safe print
+        ReleaseMutex(canPrintMutex);
 
-    // Cleanup
-    CloseHandle(canPrintMutex);
-    va_end(fprintfArgs);
+        // Cleanup
+        CloseHandle(canPrintMutex);
+        va_end(fprintfArgs);
 
-    return ret;
+        return ret;
+    }
+    return -1;
 }

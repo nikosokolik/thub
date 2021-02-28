@@ -21,7 +21,6 @@ enum RETURN_CODES
     BAD_USER_INPUT,
     INIT_DEVICES_ERROR,
     BAD_BPF_FILTER,
-    SERVER_INIT_CONNECTION_ERROR,
     CAPTURE_ERROR,
     ADAPTER_OPEN_ERROR,
     SEND_ERROR,
@@ -30,7 +29,9 @@ enum RETURN_CODES
     HANDLER_ERROR,
     SSL_WRAP_ERROR
 };
-
+const char* RETURN_VALUES[] = { "BAD_USER_INPUT", "INIT_DEVICES_ERROR",
+    "BAD_BPF_FILTER", "CAPTURE_ERROR", "ADAPTER_OPEN_ERROR", "SEND_ERROR",
+    "INJECTION_ERROR", "MUTEX_ERROR", "HANDLER_ERROR", "SSL_WRAP_ERROR" };
 const int MAX_PACKET_SIZE = 65536;
 const int CAPTURE_TIMEOUT_MS = 1000; // One second
 const DWORD SOCKET_READ_TIMEOUT_MS = 1000; // One second
@@ -41,10 +42,10 @@ const char BPF_FILTER_PART_2[] = " and port ";
 const char* USAGE_FORMAT = "%s\n%s %s\n\t%s\n\t%s\n\t%s\n\t%s\n";
 const char* USAGE_TITLE = "THUB - USAGE:";
 const char* USAGE_LINE_1 = "[-d | -i <TARGET_INTERFACE> -s <SERVER_IP> -p <SERVER_PORT>]";
-const char* USAGE_LINE_2 = "-d Enumerate capturable devices";
+const char* USAGE_LINE_2 = "-d Display capturable devices";
 const char* USAGE_LINE_3 = "-i Interface number to capture on. Can be derieved from '-d'";
-const char* USAGE_LINE_4 = "-s THUB-Server IP";
-const char* USAGE_LINE_5 = "-p THUB-Server port";
+const char* USAGE_LINE_4 = "-s THUB Server IP";
+const char* USAGE_LINE_5 = "-p THUB Server Port";
 
 // The varraible is global so it would be accessible by the KeyboardInterruptHandler
 BOOLEAN shouldQuit;
@@ -350,7 +351,6 @@ int captureMain(pcap_if_t* device, int targetDevice, char* serverIP, int serverP
                         netmask = ((struct sockaddr_in*)(device->addresses->netmask))->sin_addr.S_un.S_addr;
                     }
                     capture_filter = generateBPFFilter(serverIP, serverPort);
-                    threadSafeFprintf(stdout, "The BPF Filter is %s\n", capture_filter);
                     if (pcap_compile(fp, &bpfBinary, capture_filter, TRUE, netmask) >= 0) {
                         if (pcap_setfilter(fp, &bpfBinary) != -1) {
 
@@ -420,6 +420,12 @@ int captureMain(pcap_if_t* device, int targetDevice, char* serverIP, int serverP
         retval = MUTEX_ERROR;
     }
     return retval;
+}
+
+void PrintExitError(int returnValue) {
+    if (returnValue != SUCCESS) {
+        threadSafeFprintf(stderr, "Exited with return code: %s", RETURN_VALUES[returnValue - 1]);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -510,5 +516,6 @@ int main(int argc, char* argv[])
     else {
         retval = BAD_USER_INPUT;
     }
+    PrintExitError(retval);
     return retval;
 }

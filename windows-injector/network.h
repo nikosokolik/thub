@@ -1,6 +1,6 @@
 #pragma comment(lib,"ws2_32.lib") //Winsock Library
-#pragma comment(lib, "libcrypto.lib") //For libssl
 #pragma comment(lib, "libssl.lib") //For libssl
+#pragma comment(lib, "libcrypto.lib") //For libssl
 
 enum socketReadReturnValues
 {

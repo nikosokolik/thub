@@ -1,12 +1,13 @@
-#include "stdio.h"
-#include "winsock2.h" //need winsock for int and u_char in pcap.h
+#include <stdio.h>
+#include <winsock2.h> //need winsock for int and u_char in pcap.h
 #define HAVE_REMOTE
-#include "pcap.h" //Winpcap
+#include <pcap.h> //Winpcap
+
 #include "device_display.h"
 #include "utils.h"
 
-#pragma comment(lib , "ws2_32.lib") //For winsock
-#pragma comment(lib , "wpcap.lib") //For winpcap
+#pragma comment(lib, "wpcap.lib") //For winpcap
+#pragma comment(lib, "ws2_32.lib") //For winsock
 
 //#define IPTOSBUFFERS    12
 enum displayInterfacesRetvals

@@ -5,8 +5,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#include "network.h"
 #include "utils.h"
+#include "network.h"
 
 // Note that the messages must be of size 5 bytes
 const char* THUB_INECTOR_SOCKET_TYPE_READER = "TISTR";
@@ -105,26 +105,30 @@ BOOLEAN ProcessPacket(char* packetData, int packetLen, SSL* ssl) {
 	int errCode;
 	char strPacketLen[6] = { 0 };
 	char* data;
-	_itoa_s(packetLen, strPacketLen, sizeof(strPacketLen), 10);
-	// First five bytes are to indicate the size, rest is the packet
-	data = (char*)malloc(sizeof(char) * ( 5 * sizeof(char) + packetLen) );
-	// Copy the data
-	memcpy(data, strPacketLen, 5 * sizeof(char));
-	memcpy(data + sizeof(char) * 5, packetData, packetLen * sizeof(char));
-	// Send the data
-	sendReturnCode = SSL_write(ssl, data, 5 + packetLen);
-	if (sendReturnCode != SOCKET_ERROR) {
-		retval = TRUE;
-	}
-	else {
-		if ((errCode = (SSL_get_error(ssl, sendReturnCode)) != 5)) {
-			threadSafeFprintf(stderr, "Socket (SSL) error: %d\n", errCode);
+	if (packetLen > 0) {
+		_itoa_s(packetLen, strPacketLen, sizeof(strPacketLen), 10);
+		// First five bytes are to indicate the size, rest is the packet
+		data = (char*)malloc(5 * sizeof(char) + packetLen * sizeof(char));
+		if (data != NULL) {
+			// Copy the data
+			memcpy(data, strPacketLen, sizeof(char) * 5);
+			memcpy((data + sizeof(char) * 5), packetData, packetLen * sizeof(char));
+			// Send the data
+			sendReturnCode = SSL_write(ssl, data, 5 + packetLen);
+			if (sendReturnCode != SOCKET_ERROR) {
+				retval = TRUE;
+			}
+			else {
+				if ((errCode = (SSL_get_error(ssl, sendReturnCode)) != 5)) {
+					threadSafeFprintf(stderr, "Socket (SSL) error: %d\n", errCode);
+				}
+				else {
+					threadSafeFprintf(stderr, "Socket error: %d while writing\n", WSAGetLastError());
+				}
+			}
+			free(data);
 		}
-		else {
-			threadSafeFprintf(stderr, "Socket error: %d while writing\n", WSAGetLastError());
-		}
 	}
-	free(data);
 	return retval;
 }
 
