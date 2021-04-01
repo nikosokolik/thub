@@ -1,0 +1,12 @@
+{
+    "server": {
+        "host": "127.0.0.1",
+        "port": 12345
+    },
+    "client": {
+        "tap_name": null,
+        "mac_address": null,
+        "ip_address": null,
+        "ip_netmask": null
+    }
+}
